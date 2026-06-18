@@ -122,29 +122,6 @@
   color: var(--border-color);
 }
 
-.auth-back {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  margin: 1rem auto 0;
-  background: none;
-  border: none;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  cursor: pointer;
-  color: var(--text-secondary);
-  padding: 0.35rem 0.5rem;
-  transition: all 0.1s ease;
-}
-
-.auth-back:hover {
-  color: var(--text-primary);
-  box-shadow: var(--shadow-flat-sm);
-  transform: translate(-1px, -1px);
-}
-
 /* Avatar upload */
 .auth-avatar-section {
   display: flex;

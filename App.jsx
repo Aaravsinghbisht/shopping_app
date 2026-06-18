@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Trash2, Printer, RefreshCw, 
   Layers, ShoppingBag, Truck, FileText, 
   UserPlus, Info, Save, X, PlusCircle, Award, Database, Lock, ArrowLeft, Check,
-  ArrowUp, ArrowDown, Eye, LogIn
+  ArrowUp, ArrowDown, Eye, LogIn, Mail, User
 } from 'lucide-react';
 import { api } from './api';
 import AuthPage from './AuthPage';
 
 const MOCK_EMPLOYEES = [];
+
+const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || 'Dekds6naj';
+const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || 'default_bear';
+const API_KEY = 'EhBZCQ3j_NzLNIotVzla2CBxcGo';
 
 const QUICK_PRODUCTS = [
   { name: 'Glow-in-the-dark Spark Wand', category: 'Accessories', price: 45.00, tax: 8, discount: 5 },
@@ -49,6 +53,8 @@ function App() {
   });
   const [currentPage, setCurrentPage] = useState(user ? 'dashboard' : 'auth');
   const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showProfileSuccess, setShowProfileSuccess] = useState(false);
 
   // --- Employee State ---
   const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
@@ -453,20 +459,25 @@ function App() {
             <span>COMPILED: <strong>{invoiceLogs.length}</strong></span>
           </div>
 
-          {user ? (
-            <div className="stat-pill" style={{ gap: '0.4rem', cursor: 'pointer', position: 'relative' }} onClick={() => setShowProfilePopup(prev => !prev)}>
-              {user.avatar ? (
-                <img src={user.avatar} alt="" style={{ width: 22, height: 22, border: '2px solid var(--border-color)', objectFit: 'cover' }} />
-              ) : (
-                <div style={{ width: 22, height: 22, border: '2px solid var(--border-color)', background: 'var(--color-yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.65rem' }}>
-                  {user.name?.charAt(0)}
-                </div>
-              )}
-              <span style={{ fontSize: '0.75rem' }}>{user.name}</span>
+              {user ? (
+            <div className="stat-pill" style={{ gap: '0.4rem', position: 'relative' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer' }} onClick={() => setShowProfilePopup(prev => !prev)}>
+                {user.avatar ? (
+                  <img src={user.avatar} alt="" style={{ width: 22, height: 22, border: '2px solid var(--border-color)', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: 22, height: 22, border: '2px solid var(--border-color)', background: 'var(--color-yellow)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.65rem' }}>
+                    {user.name?.charAt(0)}
+                  </div>
+                )}
+                <span style={{ fontSize: '0.75rem' }}>{user.name}</span>
+              </span>
               {showProfilePopup && (
                 <>
                   <div style={{ position: 'fixed', inset: 0, zIndex: 1000 }} onClick={() => setShowProfilePopup(false)} />
-                  <div className="profile-popup">
+                  <div className="profile-popup" onClick={e => e.stopPropagation()}>
+                    <button className="profile-popup-close" onClick={() => setShowProfilePopup(false)}>
+                      <X size={12} />
+                    </button>
                     <div className="profile-popup-avatar">
                       {user.avatar ? (
                         <img src={user.avatar} alt="" />
@@ -476,9 +487,14 @@ function App() {
                     </div>
                     <div className="profile-popup-name">{user.name}</div>
                     <div className="profile-popup-email">{user.email}</div>
-                    <button className="neo-btn neo-btn-sm" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setShowProfilePopup(false); handleLogout(); }}>
-                      <LogIn size={12} style={{ transform: 'rotate(180deg)' }} /> Sign Out
-                    </button>
+                    <div className="profile-popup-actions">
+                      <button className="neo-btn neo-btn-sm" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setShowProfilePopup(false); setShowEditProfile(true); }}>
+                        <UserPlus size={12} /> Edit Details
+                      </button>
+                      <button className="neo-btn neo-btn-sm" style={{ width: '100%', justifyContent: 'center' }} onClick={() => { setShowProfilePopup(false); handleLogout(); }}>
+                        <LogIn size={12} style={{ transform: 'rotate(180deg)' }} /> Sign Out
+                      </button>
+                    </div>
                   </div>
                 </>
               )}
@@ -1127,6 +1143,47 @@ function App() {
           </div>
         )}
 
+        {showEditProfile && (
+          <EditProfileModal
+            user={user}
+            onClose={() => setShowEditProfile(false)}
+            onSave={(updatedUser) => {
+              setUser(updatedUser);
+              localStorage.setItem('wizago_user', JSON.stringify(updatedUser));
+              setShowEditProfile(false);
+              setShowProfileSuccess(true);
+            }}
+          />
+        )}
+
+        {showProfileSuccess && (
+          <div className="popup-overlay" onClick={() => setShowProfileSuccess(false)}>
+            <div className="popup-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 380, textAlign: 'center' }}>
+              <div style={{ padding: '2.5rem 2rem 2rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                <div className="confetti-wrap">
+                  <span className="confetti-piece" style={{ top: '10%', left: '10%', background: '#ffde47', animationDelay: '0s' }} />
+                  <span className="confetti-piece" style={{ top: '20%', right: '15%', background: '#ff6b6b', animationDelay: '0.15s' }} />
+                  <span className="confetti-piece" style={{ top: '5%', left: '50%', background: '#48dbfb', animationDelay: '0.3s' }} />
+                  <span className="confetti-piece" style={{ bottom: '25%', left: '8%', background: '#ff9ff3', animationDelay: '0.1s' }} />
+                  <span className="confetti-piece" style={{ bottom: '15%', right: '10%', background: '#54a0ff', animationDelay: '0.25s' }} />
+                  <span className="confetti-piece" style={{ top: '30%', right: '5%', background: '#5f27cd', animationDelay: '0.2s' }} />
+                  <span className="confetti-piece" style={{ bottom: '10%', left: '40%', background: '#ffde47', animationDelay: '0.35s' }} />
+                  <span className="confetti-piece" style={{ top: '40%', left: '5%', background: '#ff6b6b', animationDelay: '0.05s' }} />
+                </div>
+                <div style={{ fontSize: '3rem', lineHeight: 1 }}>🎉</div>
+                <h2 style={{ textTransform: 'uppercase', fontSize: '1.2rem', margin: 0 }}>Changes Saved!</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Your wizard profile has been updated successfully.</p>
+                <button className="neo-btn primary" onClick={() => setShowProfileSuccess(false)} style={{ marginTop: '0.5rem' }}>
+                  <Check size={14} /> Got it
+                </button>
+              </div>
+              <button className="profile-popup-close" onClick={() => setShowProfileSuccess(false)} style={{ position: 'absolute', top: '0.5rem', right: '0.5rem' }}>
+                <X size={12} />
+              </button>
+            </div>
+          </div>
+        )}
+
       </>
       ) : (
         
@@ -1142,49 +1199,42 @@ function App() {
 
           {isCompiled ? (
             <div className="receipt-sheet">
-              {/* Tear off visual edge */}
-              <div className="receipt-tear"></div>
-
-              {/* Simple plain receipt header */}
+              <div className="receipt-stamp">WIZAGO APPROVED</div>
               <div className="receipt-header">
-                <h2 className="receipt-title">Wizago Shop Manifest</h2>
-                <p className="receipt-subtitle">Official Wizardry Dispatch Receipt</p>
-                <p style={{ fontSize: '0.65rem', fontWeight: 'bold', marginTop: '0.25rem' }}>
-                  [STATUS: SPELLED, COMPILED & FILED]
-                </p>
+                <div className="receipt-logo">Wizago Shop</div>
+                <h2 className="receipt-title">Scroll of Dispatch</h2>
+                <p className="receipt-subtitle">✦ Official Wizardry Invoice Manifest ✦</p>
+                <div className="receipt-status-badge">STATUS: SPELLED, COMPILED &amp; FILED</div>
               </div>
 
-              {/* Meta identifiers info */}
               <div className="receipt-meta">
                 <div className="receipt-meta-col">
-                  <span className="receipt-meta-label">Invoice ID</span>
-                  <span className="receipt-meta-val mono-text">{invoiceNumber}</span>
+                  <span className="receipt-meta-label">Spell Code</span>
+                  <span className="receipt-meta-val">{invoiceNumber}</span>
                 </div>
-                <div className="receipt-meta-col text-right">
-                  <span className="receipt-meta-label">Spell-Date</span>
+                <div className="receipt-meta-col" style={{ textAlign: 'right' }}>
+                  <span className="receipt-meta-label">Date Cast</span>
                   <span className="receipt-meta-val">{invoiceDate}</span>
                 </div>
               </div>
 
-              {/* Verified Issuer Employee Section */}
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 className="receipt-section-title">Caster/Issuer</h3>
-                <div style={{ fontSize: '0.75rem' }}>
-                  <strong>{selectedEmployee?.name}</strong> (ID: {selectedEmployee?.id})<br />
-                  Circle: {selectedEmployee?.dept} &bull; Title: {selectedEmployee?.role}
+              <div className="receipt-employee">
+                <span className="receipt-section-icon">🧙</span>
+                <div>
+                  <strong>{selectedEmployee?.name}</strong> <span style={{ color: 'var(--text-muted)' }}>| ID: {selectedEmployee?.id}</span><br />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{selectedEmployee?.dept} · {selectedEmployee?.role}</span>
                 </div>
               </div>
 
-              {/* Registered Items */}
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 className="receipt-section-title">Spell Cart Items</h3>
+              <div className="receipt-items-wrap">
+                <h3 className="receipt-section-title">📦 Cart Contents</h3>
                 <table className="receipt-items">
                   <thead>
                     <tr>
-                      <th>Description</th>
-                      <th className="num" style={{ width: '40px' }}>Qty</th>
-                      <th className="num" style={{ width: '80px' }}>Unit</th>
-                      <th className="num" style={{ width: '90px' }}>Total</th>
+                      <th>Item</th>
+                      <th className="num">Qty</th>
+                      <th className="num">Unit</th>
+                      <th className="num">Total</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1192,7 +1242,7 @@ function App() {
                       <tr key={item.id}>
                         <td>
                           {item.name}
-                          {item.discount > 0 && ` (-${item.discount}%)`}
+                          {item.discount > 0 && <span className="receipt-badge">-{item.discount}%</span>}
                         </td>
                         <td className="num">{item.qty}</td>
                         <td className="num">${item.price.toFixed(2)}</td>
@@ -1203,49 +1253,45 @@ function App() {
                 </table>
               </div>
 
-              {/* Shipping Logistics */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <h3 className="receipt-section-title">Owl Delivery & Packaging</h3>
-                <div style={{ fontSize: '0.75rem', lineHeight: '1.4' }}>
-                  <strong>Address:</strong> {shippingForm.address}, {shippingForm.state}<br />
-                  <strong>Packaging:</strong> {PACKAGING_OPTIONS[shippingForm.packagingType].name}<br />
-                  <strong>Priority:</strong> {SHIPPING_METHODS[shippingForm.deliveryMethod].name}
-                  {shippingForm.notes && (
-                    <div style={{ fontStyle: 'italic', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
-                      * Instructions: {shippingForm.notes}
-                    </div>
-                  )}
+              <div className="receipt-items-wrap">
+                <h3 className="receipt-section-title">🦉 Delivery &amp; Packaging</h3>
+                <div className="receipt-shipping">
+                  <div><span className="receipt-info-label">To:</span> {shippingForm.address}, {shippingForm.state}</div>
+                  <div><span className="receipt-info-label">Wrap:</span> {PACKAGING_OPTIONS[shippingForm.packagingType].name}</div>
+                  <div><span className="receipt-info-label">Speed:</span> {SHIPPING_METHODS[shippingForm.deliveryMethod].name}</div>
+                  {shippingForm.notes && <div className="receipt-notes">📝 {shippingForm.notes}</div>}
                 </div>
               </div>
 
-              {/* Calculations Totals Block */}
               <div className="receipt-totals">
                 <div className="receipt-total-row">
-                  <span>Subtotal:</span>
-                  <span className="mono-text">${getSubtotal().toFixed(2)}</span>
+                  <span>Subtotal</span>
+                  <span>${getSubtotal().toFixed(2)}</span>
                 </div>
                 {getDiscountTotal() > 0 && (
-                  <div className="receipt-total-row discount" style={{ color: 'var(--color-red)' }}>
-                    <span>Discounts:</span>
-                    <span className="mono-text">-${getDiscountTotal().toFixed(2)}</span>
+                  <div className="receipt-total-row" style={{ color: 'var(--color-red)' }}>
+                    <span>Discount</span>
+                    <span>-${getDiscountTotal().toFixed(2)}</span>
                   </div>
                 )}
                 <div className="receipt-total-row">
-                  <span>Post Surcharges:</span>
-                  <span className="mono-text">${getSurcharge().toFixed(2)}</span>
+                  <span>Surcharge</span>
+                  <span>${getSurcharge().toFixed(2)}</span>
                 </div>
                 <div className="receipt-total-row">
-                  <span>Spell Taxes:</span>
-                  <span className="mono-text">${getTaxTotal().toFixed(2)}</span>
+                  <span>Spell Tax</span>
+                  <span>${getTaxTotal().toFixed(2)}</span>
                 </div>
                 <div className="receipt-total-row grand">
-                  <span>Grand Total:</span>
-                  <span className="val">${getGrandTotal().toFixed(2)}</span>
+                  <span>Grand Total</span>
+                  <span className="receipt-grand-val">${getGrandTotal().toFixed(2)}</span>
                 </div>
               </div>
 
-              <div style={{ textAlign: 'center', fontSize: '0.65rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                May your spells remain strong. Wizago Compliant.
+              <div className="receipt-footer">
+                <p>May your spells remain strong. Wizago Compliant.</p>
+                <div className="receipt-footer-sig">_________________________</div>
+                <div style={{ fontSize: '0.55rem', color: 'var(--text-muted)' }}>Authorized Wizard Signature</div>
               </div>
             </div>
           ) : (
@@ -1289,6 +1335,115 @@ function App() {
         </div>
       )}
 
+    </div>
+  );
+}
+
+function EditProfileModal({ user, onClose, onSave }) {
+  const [name, setName] = useState(user.name || '');
+  const [email, setEmail] = useState(user.email || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    setUploading(true);
+    try {
+      let avatarUrl = user.avatar;
+      if (avatarFile) {
+        const fd = new FormData();
+        fd.append('file', avatarFile);
+        fd.append('upload_preset', UPLOAD_PRESET);
+        fd.append('api_key', API_KEY);
+        const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
+        const d = await r.json();
+        if (d.secure_url) avatarUrl = d.secure_url;
+      }
+
+      const token = localStorage.getItem('wizago_token');
+      const body = { name: name.trim(), avatar: avatarUrl };
+      if (email !== user.email) body.email = email;
+      if (newPassword) {
+        body.currentPassword = currentPassword;
+        body.newPassword = newPassword;
+      }
+
+      const res = await fetch('http://localhost:3001/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Update failed');
+      onSave({ ...user, name: data.user.name, avatar: data.user.avatar, email: data.user.email });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="popup-overlay" onClick={() => !uploading && onClose()}>
+      <div className="popup-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+        <div className="popup-header">
+          <h3><UserPlus size={16} /> Edit Profile</h3>
+          <button className="neo-btn neo-btn-sm" onClick={onClose} disabled={uploading}><X size={12} /></button>
+        </div>
+        <div className="popup-body" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+              <div className="profile-popup-avatar" style={{ cursor: 'pointer', width: 72, height: 72 }} onClick={() => fileRef.current?.click()}>
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="" />
+                ) : user.avatar ? (
+                  <img src={user.avatar} alt="" />
+                ) : (
+                  <div className="profile-popup-avatar-letter" style={{ fontSize: '1.8rem' }}>{user.name?.charAt(0)}</div>
+                )}
+                {uploading && <div className="auth-avatar-spinner" />}
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { setAvatarFile(file); setAvatarPreview(URL.createObjectURL(file)); }
+              }} />
+              <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', fontWeight: 700, color: 'var(--text-muted)' }}>Click avatar to change</span>
+            </div>
+
+            <div className="form-group">
+              <label><User size={13} /> Wizard Name</label>
+              <input className="neo-input" value={name} onChange={e => setName(e.target.value)} placeholder="Wizard Name" />
+            </div>
+
+            <div className="form-group">
+              <label><Mail size={13} /> Email</label>
+              <input className="neo-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address" />
+            </div>
+
+            <div style={{ borderTop: '2px solid var(--border-color)', paddingTop: '1rem' }}>
+              <p style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Change Password (leave blank to keep current)</p>
+              <div className="form-group">
+                <label><Lock size={13} /> Current Password</label>
+                <input className="neo-input" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Current password" />
+              </div>
+              <div className="form-group" style={{ marginTop: '0.5rem' }}>
+                <label><Lock size={13} /> New Password</label>
+                <input className="neo-input" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="popup-footer" style={{ justifyContent: 'flex-end', gap: '0.5rem' }}>
+          <button className="neo-btn" onClick={onClose} disabled={uploading}>Cancel</button>
+          <button className="neo-btn primary" onClick={handleSave} disabled={uploading || !name.trim()}>
+            {uploading ? 'Saving...' : <><Save size={14} /> Save Changes</>}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
